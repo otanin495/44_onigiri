@@ -35,8 +35,31 @@
             flex-direction: column;
             padding: 2vh 2vw;
             gap: 2vh;
+            transform: translateZ(0);
         }
         
+        @media screen and (orientation: portrait) {
+            #ui {
+                padding: max(1vh, 8px) max(1vw, 8px);
+                gap: max(1vh, 6px);
+            }
+           
+            #scorePanel {
+                font-size: clamp(10px, 2.5vw, 14px);
+                min-width: clamp(100px, 20vw, 130px);
+                padding: max(1.5vh, 12px) max(1.5vw, 12px);
+            }
+        }
+
+        @media screen {
+            #ui * {
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+            }
+        }
+
         .ui-element {
             pointer-events: auto;
         }
@@ -717,18 +740,132 @@
             createBoard();
             createCoordinateLabels();
 
+            // 初期化時のイベントリスナー設定を以下に変更：
+
             renderer.domElement.addEventListener('click', onBoardClick);
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                adjustCameraForScreenSize(); 
+
+            // 複数のリサイズイベントに対応
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('orientationchange', () => {
+                // orientationchangeの後に少し遅延を入れて確実にリサイズを実行
+                setTimeout(onWindowResize, 200);
             });
+
+            // ビューポートの変更を検知
+            window.addEventListener('load', onWindowResize);
+            window.addEventListener('DOMContentLoaded', onWindowResize);
+
+            // ブラウザの戻る/進むボタン対応
+            window.addEventListener('pageshow', onWindowResize);
+
+            // Android Chromeの特殊なリサイズイベント
+            if ('visualViewport' in window) {
+                window.visualViewport.addEventListener('resize', onWindowResize);
+            }
+
+            // iOS Safari の特殊な処理
+            let isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            if (isSafari) {
+                window.addEventListener('orientationchange', () => {
+                    // iOS Safariでは orientationchange 後により長い遅延が必要
+                    setTimeout(() => {
+                        onWindowResize();
+                        // さらに追加でもう一度実行
+                        setTimeout(onWindowResize, 300);
+                    }, 500);
+                });
+            }
             window.addEventListener('orientationchange', onWindowResize);
             
             document.getElementById('undoBtn').addEventListener('click', undoMove);
             document.getElementById('resetBtn').addEventListener('click', startNewGame);
 
             animate();
+        }
+
+                // 画面回転時にUIサイズを動的に調整する関数
+        function adjustUIForOrientation() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const isLandscape = width > height;
+            
+            // UI要素のリファレンスを取得
+            const ui = document.getElementById('ui');
+            const scorePanel = document.getElementById('scorePanel');
+            const moveHistory = document.getElementById('moveHistory');
+            const buttons = document.querySelectorAll('.btn');
+            const message = document.getElementById('message');
+            
+            if (isLandscape) {
+                // 横向きの場合
+                ui.style.padding = Math.max(height * 0.01, 6) + 'px ' + Math.max(width * 0.01, 6) + 'px';
+                scorePanel.style.fontSize = Math.max(Math.min(width * 0.022, 12), 9) + 'px';
+                moveHistory.style.fontSize = Math.max(Math.min(width * 0.02, 11), 8) + 'px';
+                moveHistory.style.maxHeight = Math.max(height * 0.15, 80) + 'px';
+                
+                buttons.forEach(button => {
+                    button.style.fontSize = Math.max(Math.min(width * 0.022, 15), 10) + 'px';
+                    button.style.padding = Math.max(height * 0.02, 8) + 'px ' + Math.max(width * 0.02, 12) + 'px';
+                });
+                
+                if (message) {
+                    message.style.fontSize = Math.max(Math.min(width * 0.025, 16), 12) + 'px';
+                }
+            } else {
+                // 縦向きの場合
+                ui.style.padding = Math.max(height * 0.02, 8) + 'px ' + Math.max(width * 0.015, 8) + 'px';
+                scorePanel.style.fontSize = Math.max(Math.min(width * 0.025, 14), 10) + 'px';
+                moveHistory.style.fontSize = Math.max(Math.min(width * 0.022, 12), 9) + 'px';
+                moveHistory.style.maxHeight = Math.max(height * 0.2, 100) + 'px';
+                
+                buttons.forEach(button => {
+                    button.style.fontSize = Math.max(Math.min(width * 0.025, 16), 11) + 'px';
+                    button.style.padding = Math.max(height * 0.015, 10) + 'px ' + Math.max(width * 0.025, 15) + 'px';
+                });
+                
+                if (message) {
+                    message.style.fontSize = Math.max(Math.min(width * 0.03, 18), 14) + 'px';
+                }
+            }
+        }
+
+        // 改善された onWindowResize 関数（上記と組み合わせて使用）
+        function onWindowResize() {
+            clearTimeout(window.resizeTimeout);
+            window.resizeTimeout = setTimeout(() => {
+                // Three.jsの調整
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                adjustCameraForScreenSize();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                recreateCoordinateLabels();
+                updateBoardPositions();
+                
+                // UIの動的調整
+                adjustUIForOrientation();
+                
+                // 強制リフロー
+                forceUIReflow();
+            }, 100);
+        }
+
+        function forceUIReflow() {
+            const ui = document.getElementById('ui');
+            const display = ui.style.display;
+            ui.style.display = 'none';
+            ui.offsetHeight; // 強制リフロー
+            ui.style.display = display || 'flex';
+            
+            // 各UI要素も個別にリフロー
+            ['scorePanel', 'moveHistory', 'controls'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const elementDisplay = element.style.display;
+                    element.style.display = 'none';
+                    element.offsetHeight;
+                    element.style.display = elementDisplay || 'block';
+                }
+            });
         }
 
         function createBoard() {
@@ -996,7 +1133,9 @@
         function createPiece(x, y, color) {
             const geometry = createPieceGeometry();
             const material = new THREE.MeshLambertMaterial({ 
-                vertexColors: true
+                vertexColors: true,
+                transparent: true, // 追加：透明度を有効にする
+                opacity: 1 // 追加：通常は不透明
             });
             const piece = new THREE.Mesh(geometry, material);
             
@@ -1855,7 +1994,9 @@
         function dropPieceWithBounce(x, y, color, callback) {
             const geometry = createPieceGeometry();
             const material = new THREE.MeshLambertMaterial({ 
-                vertexColors: true
+                vertexColors: true,
+                transparent: true, // 追加：透明度を有効にする
+                opacity: 0 // 追加：初期透明度を0に設定
             });
             const piece = new THREE.Mesh(geometry, material);
             
@@ -1870,16 +2011,19 @@
             piece.castShadow = true;
             scene.add(piece);
             boardPieces.push(piece);
-
+        
             const duration = 800;
             const startTime = Date.now();
             const targetY = 0.25;
             const startY = 6;
-
+        
             function animate() {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-
+        
+                // 追加：フェードイン効果
+                piece.material.opacity = Math.min(progress * 2, 1); // 前半でフェードイン
+        
                 let bounceProgress;
                 if (progress < 0.8) {
                     bounceProgress = progress / 0.8;
@@ -1890,14 +2034,15 @@
                     const bounceOffset = Math.sin(bouncePhase * Math.PI * 3) * bounceHeight;
                     piece.position.y = targetY + bounceOffset;
                 }
-
+        
                 piece.rotation.y = progress * Math.PI * 2;
-
+        
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
                     piece.position.y = targetY;
                     piece.rotation.y = 0;
+                    piece.material.opacity = 1; // 追加：最終的に完全不透明にする
                     if (callback && typeof callback === 'function') {
                         callback();
                     }
@@ -2147,16 +2292,36 @@
         }
 
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
+            // 複数回の呼び出しを防ぐためのデバウンス
+            clearTimeout(window.resizeTimeout);
+            window.resizeTimeout = setTimeout(() => {
+                // カメラのアスペクト比を更新
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+        
+                // 画面サイズに応じたカメラ位置の調整
+                adjustCameraForScreenSize();
+        
+                // レンダラーのサイズを更新
+                renderer.setSize(window.innerWidth, window.innerHeight);
+        
+                // 座標ラベルを再作成
+                recreateCoordinateLabels();
+        
+                // ボード上の駒の位置を更新
+                updateBoardPositions();
+        
+                // UIの再配置を強制実行
+                forceUIReflow();
+            }, 100);
+        }
 
-            adjustCameraForScreenSize();
-
-            renderer.setSize(window.innerWidth, window.innerHeight);
-
-            recreateCoordinateLabels();
-
-            updateBoardPositions();
+        function forceUIReflow() {
+            const ui = document.getElementById('ui');
+            const display = ui.style.display;
+            ui.style.display = 'none';
+            ui.offsetHeight; // 強制的にリフローを発生させる
+            ui.style.display = display || 'flex';
         }
 
         function animate() {
