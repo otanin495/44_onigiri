@@ -667,25 +667,25 @@
 
         @media screen and (max-width: 768px) {
             #audioControlsBottom {
-                bottom: max(4vh, 800px);
+                bottom: 100px;
             }
         }
 
         @media screen and (max-width: 500px) {
             #audioControlsBottom {
-                bottom: max(6vh, 100px);
+                bottom: 120px;
             }
         }
 
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
             #audioControlsBottom {
-                bottom: max(2vh, calc(120px + env(safe-area-inset-bottom)));
+                bottom: max(2vh, calc(20px + env(safe-area-inset-bottom)));
             }
         }
 
         #audioControlsBottom {
             position: fixed;
-            bottom: max(2vh, 60px);
+            bottom: 20px;
             left: 2vw;
             z-index: 101;
             pointer-events: auto;
@@ -2822,4 +2822,3 @@
     </script>
 </body>
 </html>
-
