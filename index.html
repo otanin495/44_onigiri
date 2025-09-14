@@ -665,33 +665,27 @@
             }
         }
 
-        @media (max-width: 768px) {
-            .title-audio-btn {
-                width: clamp(50px, 7vw, 60px);
-                height: clamp(50px, 7vw, 60px);
-                font-size: clamp(14px, 3vw, 16px);
+        @media screen and (max-width: 768px) {
+            #audioControlsBottom {
+                bottom: max(4vh, 30px);
             }
         }
-        
-        @media (max-width: 500px) {
-            .title-audio-btn {
-                width: clamp(45px, 6vw, 50px);
-                height: clamp(45px, 6vw, 50px);
-                font-size: clamp(12px, 2.5vw, 14px);
+
+        @media screen and (max-width: 500px) {
+            #audioControlsBottom {
+                bottom: max(6vh, 40px);
             }
         }
-        
-        @media (max-width: 450px) {
-            .title-audio-btn {
-                width: clamp(40px, 5vw, 45px);
-                height: clamp(40px, 5vw, 45px);
-                font-size: clamp(10px, 2vw, 12px);
+
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            #audioControlsBottom {
+                bottom: max(2vh, calc(20px + env(safe-area-inset-bottom)));
             }
         }
 
         #audioControlsBottom {
             position: fixed;
-            bottom: 2vh;
+            bottom: max(2vh, 20px);
             left: 2vw;
             z-index: 101;
             pointer-events: auto;
