@@ -15,6 +15,16 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             overflow: hidden;
             color: white;
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        canvas {
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         
         #gameContainer {
@@ -173,40 +183,6 @@
             transform: none;
         }
 
-        .audio-btn {
-            padding: 0;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            color: white;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            width: clamp(60px, 8vw, 80px);
-            height: clamp(60px, 8vw, 80px);
-            font-size: clamp(16px, 3.5vw, 18px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Noto Sans JP', sans-serif;
-        }
-        
-        .audio-btn:hover {
-            background: rgba(0, 0, 0, 1.2);
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: translateY(-1px);
-        }
-        
-        .audio-btn.disabled {
-            opacity: 0.5;
-            background: rgba(100, 0, 0, 0.7);
-        }
-        
-        .audio-btn.enabled {
-            background: rgba(0, 54, 129, 0.7);
-        }
-        
         #message {
             position: fixed;
             bottom: 8vh;
@@ -232,16 +208,7 @@
             justify-content: center;
             z-index: 200;
         }
-        
-        .modal-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px;
-            border-radius: 15px;
-            text-align: center;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(20px);
-        }
-        
+
         .score-display {
             display: flex;
             align-items: center;
@@ -353,31 +320,34 @@
             text-align: center;
             border: 2px solid rgba(255, 255, 255, 0.3);
             backdrop-filter: blur(20px);
-            transform: scale(0);
-            transition: transform 0.3s ease-out;
+            transform: scale(0.7);
+            transform-origin: center;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         
         .modal-content.show {
             transform: scale(1);
+            opacity: 1;
+        }
+        
+        .modal-content.hide {
+            transform: scale(0.8);
+            opacity: 0;
+            transition: all 0.3s ease-in;
         }
         
         .result-element {
             opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.3s ease-out;
+            transform: none;
+            transition: opacity 0.3s ease-out;
             visibility: hidden;
         }
         
         .result-element.show {
             opacity: 1;
-            transform: translateY(0);
+            transform: none;
             visibility: visible;
-        }
-
-        .audio-btn {
-            width: clamp(60px, 8vw, 80px);
-            height: clamp(60px, 8vw, 80px);
-            font-size: clamp(16px, 3.5vw, 18px);
         }
 
         #restartButton.show {
@@ -567,6 +537,14 @@
                 font-size: 14px;
                 margin-bottom: 25px;
             }
+
+            .modal-content {
+                width: 70vw;
+                max-width: 300px;
+                min-height: 230px;
+                margin: 18px 7px;
+                padding: 19px 8px;
+            }
         }
         
         @media (max-width: 450px) {
@@ -665,98 +643,6 @@
             }
         }
 
-        @media screen and (max-width: 768px) {
-            #audioControlsBottom {
-                bottom: 120px;
-            }
-        }
-
-        @media screen and (max-width: 500px) {
-            #audioControlsBottom {
-                bottom: 140px;
-            }
-        }
-
-        @supports (padding-bottom: env(safe-area-inset-bottom)) {
-            #audioControlsBottom {
-                bottom: max(60px, calc(60px + env(safe-area-inset-bottom)));
-            }
-        }
-
-        #audioControlsBottom {
-            position: fixed;
-            bottom: 60px;
-            left: 2vw;
-            z-index: 101;
-            pointer-events: auto;
-        }
-
-        #titleAudioControls {
-            position: fixed;
-            bottom: 2vh;
-            left: 2vw;
-            z-index: 101;
-        }
-
-        .audio-btn:hover {
-            background: rgba(0, 0, 0, 1);
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: translateY(-2px);
-        }
-        
-        .audio-btn.disabled {
-            opacity: 0.7;
-            background: rgba(100, 0, 0, 0.7);
-        }
-        
-        .audio-btn.enabled {
-            background: rgba(0, 54, 129, 0.7);
-        }
-
-        #titleAudioControls {
-            margin-top: 20px;
-        }
-        
-        .title-audio-btn {
-            padding: 0;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            color: white;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            width: clamp(60px, 8vw, 80px);
-            height: clamp(60px, 8vw, 80px);
-            font-size: clamp(16px, 3.5vw, 18px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Noto Sans JP', sans-serif;
-        }
-        
-        .title-audio-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.8);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-        
-        .title-audio-btn.disabled {
-            opacity: 0.7;
-        }
-
-        .title-credits {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: clamp(12px, 2.5vw, 16px);
-            color: rgba(255, 255, 255, 0.8);
-            text-align: center;
-        }
-
         .details-btn {
             position: absolute;
             bottom: 20px;
@@ -799,14 +685,25 @@
             text-align: center;
             border: 2px solid rgba(255, 255, 255, 0.3);
             backdrop-filter: blur(20px);
-            transform: scale(0);
-            transition: transform 0.3s ease-out;
+            transform: scale(0.7);
+            transform-origin: center;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             max-width: 400px;
+            min-height: 200px;
+            box-sizing: border-box;
             margin: 20px;
         }
 
         .details-modal-content.show {
             transform: scale(1);
+            opacity: 1;
+        }
+
+        .details-modal-content.hide {
+            transform: scale(0.8);
+            opacity: 0;
+            transition: all 0.3s ease-in;
         }
 
         .details-close-btn {
@@ -855,9 +752,6 @@
             楽しんでいただければ幸いです。</p>
             <button id="startGameBtn" class="start-btn">はじめる</button>
         </div>
-        <div class="title-credits">
-            効果音：効果音ラボ　様
-        </div>
         <button id="detailsBtn" class="details-btn">詳細</button>
         <div id="detailsModal">
             <div class="details-modal-content">
@@ -865,9 +759,6 @@
                 研究レポートが出来次第、ここにリンクを掲載予定です。</div>
                 <button id="detailsCloseBtn" class="details-close-btn">閉じる</button>
             </div>
-        </div>
-        <div id="titleAudioControls">
-            <button id="titleSoundToggle" class="title-audio-btn enabled">🔊</button>
         </div>
     </div>
     <div id="gameContainer">
@@ -897,9 +788,6 @@
                     <button id="resetBtn" class="btn">リセット</button>
                 </div>
             </div>
-            <div id="audioControlsBottom" class="ui-element">
-                <button id="soundToggle" class="audio-btn enabled">🔊</button>
-            </div>
         </div>
 
         <div id="message"></div>
@@ -925,18 +813,6 @@
     </div>
 
     <script>
-        // 音響効果用の変数
-        let soundEnabled = true;
-        let sounds = {};
-
-        // 音声ファイルの定義
-        const soundFiles = {
-            placePiece: 'place-piece.mp3',
-            undo: 'undo.mp3',
-            reset: 'reset.mp3',
-            startGame: 'start-game.mp3',
-            finish: 'finish.mp3',
-        };
 
         function initAudio() {
             Object.keys(soundFiles).forEach(key => {
@@ -948,19 +824,6 @@
                     console.log(`音声ファイル ${soundFiles[key]} の読み込みに失敗しました`);
                 });
             });
-        }
-
-        function playSound(soundName) {
-            if (!soundEnabled || !sounds[soundName]) return;
-            
-            try {
-                sounds[soundName].currentTime = 0;
-                sounds[soundName].play().catch(e => {
-                    console.log(`効果音の再生に失敗: ${soundName}`);
-                });
-            } catch (e) {
-                console.log(`効果音の再生エラー: ${soundName}`);
-            }
         }
 
         let scene, camera, renderer, raycaster, mouse;
@@ -1084,13 +947,34 @@
 
 
             renderer.domElement.addEventListener('click', onBoardClick);
+            renderer.domElement.addEventListener('touchend', onBoardTouch);
+            renderer.domElement.addEventListener('touchstart', preventTouchScroll);
             renderer.domElement.style.display = 'block';
             renderer.domElement.style.width = '100%';
             renderer.domElement.style.height = '100%';
 
-            document.getElementById('soundToggle').addEventListener('click', toggleSound);
+            function preventTouchScroll(event) {
+                event.preventDefault();
+            }
 
-            initAudio();
+            function onBoardTouch(event) {
+                event.preventDefault();
+                
+                if (event.touches && event.touches.length > 0) {
+                    const touch = event.touches[0];
+                    onBoardClick({
+                        clientX: touch.clientX,
+                        clientY: touch.clientY
+                    });
+                } else if (event.changedTouches && event.changedTouches.length > 0) {
+                    // touchendの場合
+                    const touch = event.changedTouches[0];
+                    onBoardClick({
+                        clientX: touch.clientX,
+                        clientY: touch.clientY
+                    });
+                }
+            }
 
             window.addEventListener('resize', debounceResize);
             window.addEventListener('orientationchange', () => {
@@ -1107,7 +991,6 @@
             
             document.getElementById('undoBtn').addEventListener('click', undoMove);
             document.getElementById('resetBtn').addEventListener('click', startNewGame);
-            document.getElementById('titleSoundToggle').addEventListener('click', toggleSound);
             document.getElementById('detailsBtn').addEventListener('click', showDetailsModal);
             document.getElementById('detailsCloseBtn').addEventListener('click', hideDetailsModal);
 
@@ -1208,7 +1091,6 @@
                     
                     dropPieceWithBounce(pos.x, pos.y, pos.color, () => {
                         placedPieces++;
-                        playSound('placePiece');
                         if (placedPieces === totalPieces && !callbackExecuted) {
                             callbackExecuted = true;
                             setTimeout(() => {
@@ -1402,20 +1284,48 @@
             boardPieces.push(piece);
         }
 
-        function onBoardClick(event) {
-            if (gameState !== 'playing' || currentPlayer !== 0 || isAnimating || !validMovesVisible) return;
+        let lastClickTime = 0;
+        const CLICK_DEBOUNCE = 200;
 
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        function onBoardClick(event) {
+            const now = Date.now();
+            if (now - lastClickTime < CLICK_DEBOUNCE) {
+                return;
+            }
+            lastClickTime = now;
+
+            if (gameState !== 'playing' || currentPlayer !== 0 || isAnimating) return;
+
+            const rect = renderer.domElement.getBoundingClientRect();
+            const clientX = event.clientX - rect.left;
+            const clientY = event.clientY - rect.top;
+
+            mouse.x = (clientX / rect.width) * 2 - 1;
+            mouse.y = -(clientY / rect.height) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
 
-            const boardPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-            const intersectPoint = new THREE.Vector3();
-            raycaster.ray.intersectPlane(boardPlane, intersectPoint);
+            const ray = raycaster.ray;
+            const planeY = 0.16;
+            const t = (planeY - ray.origin.y) / ray.direction.y;
+            const intersectPoint = ray.origin.clone().add(ray.direction.clone().multiplyScalar(t));
 
-            const x = Math.floor((intersectPoint.x + 2.5) / 1.25);
-            const z = Math.floor((intersectPoint.z + 2.5) / 1.25);
+            const rawX = (intersectPoint.x + 2.5) / 1.25;
+            const rawZ = (intersectPoint.z + 2.5) / 1.25;
+
+            const x = Math.floor(rawX);
+            const z = Math.floor(rawZ);
+
+            const relativeX = rawX - x;
+            const relativeZ = rawZ - z;
+
+            const margin = 0.05;
+            if (relativeX < margin || relativeX > (1 - margin) || 
+                relativeZ < margin || relativeZ > (1 - margin)) {
+                return;
+            }
+
+            console.log(`Click: screen(${clientX}, ${clientY}) -> intersect(${intersectPoint.x.toFixed(2)}, ${intersectPoint.z.toFixed(2)}) -> board(${x}, ${z})`);
 
             if (x >= 0 && x < 4 && z >= 0 && z < 4) {
                 makeMove(x, z, 1);
@@ -1426,7 +1336,6 @@
             if (!isValidMove(x, y, color) || isAnimating) return false;
 
             isAnimating = true;
-            playSound('placePiece');
             setButtonsEnabled(false);
             const flipped = flipPieces(x, y, color, true);
             if (flipped.length === 0) {
@@ -1529,7 +1438,6 @@
 
         function makeAIMove() {
             if (isAnimating) return;
-            playSound('placePiece');
             try {
                 let prev_move = -1;
                 for (let i = moveHistory.length - 1; i >= 0; i--) {
@@ -1722,7 +1630,6 @@
                 } else {
                     piece.position.y = originalY;
                     piece.rotation.x = targetRotation;
-                    playSound('placePiece');
                     callback();
                 }
             }
@@ -1734,8 +1641,8 @@
             
             validMovesHighlights.forEach(highlight => scene.remove(highlight));
             validMovesHighlights = [];
-            validMovesVisible = false;
-
+            validMovesVisible = true;
+        
             moves.forEach(move => {
                 const geometry = new THREE.RingGeometry(0.3, 0.5, 16);
                 const material = new THREE.MeshBasicMaterial({ 
@@ -1753,9 +1660,7 @@
                 scene.add(highlight);
                 validMovesHighlights.push(highlight);
             });
-            setTimeout(() => {
-                validMovesVisible = true;
-            }, 100);
+            // setTimeoutを削除
         }
 
         function hideValidMoves() {
@@ -2124,7 +2029,6 @@
 
             document.getElementById('message').style.display = 'none';
             showCenterMessage("終局", 2000);
-            playSound('finish');
 
             setTimeout(() => {
                 let playerScore = 0, aiScore = 0;
@@ -2217,7 +2121,6 @@
                 setTimeout(() => {
                     dropPieceWithBounce(pos.x, pos.y, 2, () => {
                         placedPieces++;
-                        playSound('placePiece');
                         if (placedPieces === totalPieces) {
                             setTimeout(() => {
                                 showGameResult(finalPlayerScore, finalAiScore);
@@ -2231,7 +2134,6 @@
                 setTimeout(() => {
                     dropPieceWithBounce(pos.x, pos.y, 1, () => {
                         placedPieces++;
-                        playSound('placePiece');
                         if (placedPieces === totalPieces) {
                             setTimeout(() => {
                                 showGameResult(finalPlayerScore, finalAiScore);
@@ -2329,7 +2231,7 @@
 
             setTimeout(() => {
                 modalContent.classList.add('show');
-            }, 100);
+            }, 50);
 
             setTimeout(() => {
                 let result;
@@ -2395,7 +2297,6 @@
         }
 
         function undoMove() {
-            playSound('undo');
             if (moveHistory.length === 0 || gameState !== 'playing' || isAnimating || isGameEnding) {
                 return;
             }
@@ -2458,7 +2359,6 @@
         }
 
         function startNewGame() {
-            playSound('reset');
             if (isGameEnding) {
                 return; 
             }
@@ -2493,13 +2393,20 @@
                         }
                     }
 
+                    board[1][1] = 2;
+                    board[1][2] = 1;
+                    board[2][1] = 1;
+                    board[2][2] = 2;
+
+                    updateScore();
+            
                     const initialPositions = [
                         {x: 1, y: 1, color: 2}, 
                         {x: 2, y: 1, color: 1}, 
                         {x: 1, y: 2, color: 1}, 
                         {x: 2, y: 2, color: 2} 
                     ];
-        
+            
                     let placedPieces = 0;
                     let callbackExecuted = false;
                     
@@ -2507,16 +2414,9 @@
                         setTimeout(() => {
                             dropPieceWithBounce(pos.x, pos.y, pos.color, () => {
                                 placedPieces++;
-                                playSound('placePiece');
                                 if (placedPieces === initialPositions.length && !callbackExecuted) {
                                     callbackExecuted = true;
-                                    board[1][1] = 2;
-                                    board[1][2] = 1;
-                                    board[2][1] = 1;
-                                    board[2][2] = 2;
-                                    
                                     isAnimating = false;
-                                    updateScore();
                                     updateMessage("あなたの番です");
                                     
                                     setTimeout(() => {
@@ -2533,7 +2433,6 @@
         }
 
         function restartGameFromModal() {
-            playSound('startGame');
             const gameResult = document.getElementById('gameResult');
             const scoreSection = document.getElementById('scoreSection');
             const restartButton = document.getElementById('restartButton');
@@ -2543,13 +2442,11 @@
             scoreSection.classList.remove('show');
             restartButton.classList.remove('show');
             modalContent.classList.remove('show');
-            
+            modalContent.classList.add('hide');
+
             setTimeout(() => {
                 document.getElementById('gameOverModal').style.display = 'none';
-                
-                if (isGameEnding) {
-                    return; 
-                }
+                modalContent.classList.remove('hide');
                 
                 setButtonsEnabled(false);
                 hideValidMoves();
@@ -2571,6 +2468,7 @@
                 
                 if (boardPieces.length > 0) {
                     animateRemoveAllPieces(() => {
+                        // ボード配列を初期配置で初期化
                         board = [];
                         for (let y = 0; y < 4; y++) {
                             board[y] = [];
@@ -2578,6 +2476,15 @@
                                 board[y][x] = 0;
                             }
                         }
+                        
+                        // 初期配置を設定
+                        board[1][1] = 2;
+                        board[1][2] = 1;
+                        board[2][1] = 1;
+                        board[2][2] = 2;
+                        
+                        // スコアを2-2に更新
+                        updateScore();
         
                         const initialPositions = [
                             {x: 1, y: 1, color: 2}, 
@@ -2593,7 +2500,6 @@
                             setTimeout(() => {
                                 dropPieceWithBounce(pos.x, pos.y, pos.color, () => {
                                     placedPieces++;
-                                    playSound('placePiece');
                                     if (placedPieces === initialPositions.length && !callbackExecuted) {
                                         callbackExecuted = true;
                                         board[1][1] = 2;
@@ -2616,11 +2522,10 @@
                 } else {
                     initializeGame();
                 }
-            }, 200);
+            }, 300);
         }
 
         function startGame() {
-            playSound('startGame');
             if (window.innerWidth > window.innerHeight && window.innerHeight < 600) {
                 return;
             }
@@ -2707,7 +2612,6 @@
                 adjustCameraForScreenSize();
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-                recreateCoordinateLabels();
                 updateBoardPositions();
                 forceUIReflow();
                 renderer.render(scene, camera);
@@ -2774,26 +2678,6 @@
                     titleScreen.style.display = 'none';
                     gameContainer.style.display = 'block';
                 }
-            }
-        }
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-
-            const btn = document.getElementById('soundToggle');
-            btn.textContent = soundEnabled ? '🔊' : '🔇';
-            btn.classList.toggle('enabled', soundEnabled);
-            btn.classList.toggle('disabled', !soundEnabled);
- 
-            const titleBtn = document.getElementById('titleSoundToggle');
-            if (titleBtn) {
-                titleBtn.textContent = soundEnabled ? '🔊' : '🔇';
-                titleBtn.classList.toggle('enabled', soundEnabled);
-                titleBtn.classList.toggle('disabled', !soundEnabled);
-            }
-            
-            if (soundEnabled) {
-                playSound('startGame');
             }
         }
 
