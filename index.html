@@ -838,7 +838,7 @@
         let initialAnimationDone = false;
         let gameNotation = []; 
         let isGameEnding = false; 
-        let validMovesVisible = false;
+        let boardGroup;
 
         const node = [19,27,1,8,26,11,11,25,26,26,0,8,16,24,25,25,11,11,11,11,-1,-1,24,24,1,2,3,1,3,8,1,2,16,24,24,2,0,8,3,-1,-1,-1,1,3,-1,1,0,8,0,24,2,1,-1,-1,-1,-1,3,8,8,8];
         let changed_node = [...node];
@@ -942,6 +942,9 @@
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
 
+            boardGroup = new THREE.Group();
+            scene.add(boardGroup);
+
             createBoard();
             createCoordinateLabels();
 
@@ -967,7 +970,6 @@
                         clientY: touch.clientY
                     });
                 } else if (event.changedTouches && event.changedTouches.length > 0) {
-                    // touchendの場合
                     const touch = event.changedTouches[0];
                     onBoardClick({
                         clientX: touch.clientX,
@@ -1003,20 +1005,20 @@
             const boardMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
             const boardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
             boardMesh.receiveShadow = true;
-            scene.add(boardMesh);
-
+            boardGroup.add(boardMesh);
+        
             for (let i = 0; i <= 4; i++) {
                 const vLineGeometry = new THREE.BoxGeometry(0.05, 0.31, 5);
                 const vLineMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
                 const vLine = new THREE.Mesh(vLineGeometry, vLineMaterial);
                 vLine.position.set(-2.5 + i * 1.25, 0.1, 0);
-                scene.add(vLine);
-
+                boardGroup.add(vLine);
+        
                 const hLineGeometry = new THREE.BoxGeometry(5, 0.31, 0.05);
                 const hLineMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
                 const hLine = new THREE.Mesh(hLineGeometry, hLineMaterial);
                 hLine.position.set(0, 0.1, -2.5 + i * 1.25);
-                scene.add(hLine);
+                boardGroup.add(hLine);
             }
         }
 
@@ -1040,9 +1042,9 @@
                 mesh.position.set(-1.875 + index * 1.25, 0.2, -3.2);
                 mesh.rotation.x = -Math.PI / 2;
                 mesh.userData = { isCoordinateLabel: true };
-                scene.add(mesh);
+                boardGroup.add(mesh);
             });
-
+        
             const rows = ['1', '2', '3', '4'];
             rows.forEach((row, index) => {
                 const geometry = new THREE.PlaneGeometry(0.4, 0.4);
@@ -1062,7 +1064,7 @@
                 mesh.position.set(-3.2, 0.2, -1.875 + index * 1.25);
                 mesh.rotation.x = -Math.PI / 2;
                 mesh.userData = { isCoordinateLabel: true };
-                scene.add(mesh);
+                boardGroup.add(mesh);
             });
         }
 
@@ -1248,7 +1250,7 @@
         }
 
         function updateBoard() {
-            boardPieces.forEach(piece => scene.remove(piece));
+            boardPieces.forEach(piece => boardGroup.remove(piece));
             boardPieces = [];
 
             for (let y = 0; y < 4; y++) {
@@ -1280,7 +1282,7 @@
             }
             
             piece.castShadow = true;
-            scene.add(piece);
+            boardGroup.add(piece);
             boardPieces.push(piece);
         }
 
@@ -1660,7 +1662,6 @@
                 scene.add(highlight);
                 validMovesHighlights.push(highlight);
             });
-            // setTimeoutを削除
         }
 
         function hideValidMoves() {
@@ -2051,7 +2052,7 @@
                     aiScore += Math.ceil(emptySpaces / 2);
                 }
 
-                animateRemoveAllPieces(() => {
+                animateRemoveAllPiecesWithTilt(() => {
                     animateFinalPlacement(playerScore, aiScore);
                 });
             }, 2000);
@@ -2093,6 +2094,86 @@
                     boardPieces.forEach(piece => scene.remove(piece));
                     boardPieces = [];
                     callback();
+                }
+            }
+            animate();
+        }
+
+        function animateRemoveAllPiecesWithTilt(callback) {
+            const duration = 2500;
+            const startTime = Date.now();
+            const pieces = [...boardPieces];
+
+            const initialPositions = pieces.map(piece => ({
+                x: piece.position.x,
+                y: piece.position.y,
+                z: piece.position.z
+            }));
+
+            function easeInOutCubic(t) {
+                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+            
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                if (progress < 0.25) {
+                    const tiltProgress = easeInOutCubic(progress / 0.25);
+                    boardGroup.rotation.z = -Math.PI / 8 * tiltProgress;
+                }
+
+                pieces.forEach((piece, index) => {
+                    const delay = index * 0.015;
+                    const adjustedProgress = Math.max(0, Math.min(1, (progress - delay) / (1 - delay)));
+                    
+                    if (adjustedProgress > 0.25) {
+                        const slideProgress = (adjustedProgress - 0.25) / 0.75;
+
+                        const slideDistance = slideProgress * slideProgress * 10;
+                        piece.position.x = initialPositions[index].x + slideDistance;
+
+                        const localX = piece.position.x;
+                        if (localX > 3) {
+                            const fallProgress = Math.min((localX - 3) / 4, 1);
+                            piece.position.y = initialPositions[index].y - fallProgress * fallProgress * 5;
+
+                            if (piece.material) {
+                                piece.material.opacity = Math.max(0, 1 - fallProgress);
+                                if (!piece.material.transparent) {
+                                    piece.material.transparent = true;
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    const resetDuration = 600;
+                    const resetStartTime = Date.now();
+                    
+                    function resetAnimate() {
+                        const resetElapsed = Date.now() - resetStartTime;
+                        const resetProgress = Math.min(resetElapsed / resetDuration, 1);
+                        const easedProgress = easeInOutCubic(resetProgress);
+
+                        boardGroup.rotation.z = -Math.PI / 8 * (1 - easedProgress);
+                        
+                        if (resetProgress < 1) {
+                            requestAnimationFrame(resetAnimate);
+                        } else {
+                            boardGroup.rotation.z = 0;
+
+                            pieces.forEach(piece => {
+                                boardGroup.remove(piece);
+                            });
+                            boardPieces = [];
+                            callback();
+                        }
+                    }
+                    resetAnimate();
                 }
             }
             animate();
@@ -2162,9 +2243,9 @@
             }
             
             piece.castShadow = true;
-            scene.add(piece);
+            boardGroup.add(piece);
             boardPieces.push(piece);
-        
+
             const duration = 800;
             const startTime = Date.now();
             const targetY = 0.25;
@@ -2173,7 +2254,7 @@
             function animate() {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-
+        
                 piece.material.opacity = Math.min(progress * 2, 1);
         
                 let bounceProgress;
@@ -2384,7 +2465,7 @@
             updateMoveHistoryDisplay();
             
             if (boardPieces.length > 0) {
-                animateRemoveAllPieces(() => {
+                animateRemoveAllPiecesWithTilt(() => {
                     board = [];
                     for (let y = 0; y < 4; y++) {
                         board[y] = [];
@@ -2467,8 +2548,7 @@
                 updateMoveHistoryDisplay();
                 
                 if (boardPieces.length > 0) {
-                    animateRemoveAllPieces(() => {
-                        // ボード配列を初期配置で初期化
+                    animateRemoveAllPiecesWithTilt(() => {
                         board = [];
                         for (let y = 0; y < 4; y++) {
                             board[y] = [];
@@ -2476,14 +2556,12 @@
                                 board[y][x] = 0;
                             }
                         }
-                        
-                        // 初期配置を設定
+
                         board[1][1] = 2;
                         board[1][2] = 1;
                         board[2][1] = 1;
                         board[2][2] = 2;
-                        
-                        // スコアを2-2に更新
+
                         updateScore();
         
                         const initialPositions = [
