@@ -814,18 +814,6 @@
 
     <script>
 
-        function initAudio() {
-            Object.keys(soundFiles).forEach(key => {
-                sounds[key] = new Audio(soundFiles[key]);
-                sounds[key].preload = 'auto';
-                sounds[key].volume = 0.5;
-
-                sounds[key].addEventListener('error', (e) => {
-                    console.log(`音声ファイル ${soundFiles[key]} の読み込みに失敗しました`);
-                });
-            });
-        }
-
         let scene, camera, renderer, raycaster, mouse;
         let board = [];
         let gameState = 'waiting';
@@ -837,7 +825,8 @@
         let lastMoveHighlight = null;
         let initialAnimationDone = false;
         let gameNotation = []; 
-        let isGameEnding = false; 
+        let isGameEnding = false;
+        let isRestarting = false; 
         let boardGroup;
 
         const node = [19,27,1,8,26,11,11,25,26,26,0,8,16,24,25,25,11,11,11,11,-1,-1,24,24,1,2,3,1,3,8,1,2,16,24,24,2,0,8,3,-1,-1,-1,1,3,-1,1,0,8,0,24,2,1,-1,-1,-1,-1,3,8,8,8];
@@ -1069,13 +1058,13 @@
         }
 
         function animateInitialPieces(callback) {
-            if (isAnimating && initialAnimationDone) {
+            if (isAnimating && boardPieces.length > 0) {
                 return;
             }
-
-            boardPieces.forEach(piece => scene.remove(piece));
+        
+            boardPieces.forEach(piece => boardGroup.remove(piece));
             boardPieces = [];
-
+        
             const initialPositions = [
                 {x: 1, y: 1, color: 2}, 
                 {x: 2, y: 1, color: 1}, 
@@ -1155,6 +1144,7 @@
 
             if (!initialAnimationDone) {
                 initialAnimationDone = true;
+                isAnimating = true;
                 setButtonsEnabled(false);
                 animateInitialPieces(() => {
                     board[1][1] = 2;
@@ -1163,10 +1153,13 @@
                     board[2][2] = 2;
                     
                     updateScore();
+                    isAnimating = false;
                     updateMessage("あなたの番です");
                     
                     setTimeout(() => {
-                        showValidMoves();
+                        if (validMovesHighlights.length === 0) {
+                            showValidMoves();
+                        }
                     }, 300);
                 });
             } else {
@@ -1296,7 +1289,13 @@
             }
             lastClickTime = now;
 
-            if (gameState !== 'playing' || currentPlayer !== 0 || isAnimating) return;
+            if (gameState !== 'playing' || currentPlayer !== 0 || isAnimating || isRestarting) {
+                return;
+            }
+            
+            if (validMovesHighlights.length === 0) {
+                return;
+            }
 
             const rect = renderer.domElement.getBoundingClientRect();
             const clientX = event.clientX - rect.left;
@@ -1639,6 +1638,10 @@
         }
 
         function showValidMoves() {
+            if (validMovesHighlights.length > 0) {
+                return;
+            }
+
             const moves = getValidMoves(1);
             
             validMovesHighlights.forEach(highlight => scene.remove(highlight));
@@ -2103,13 +2106,24 @@
             const duration = 2500;
             const startTime = Date.now();
             const pieces = [...boardPieces];
-
+        
             const initialPositions = pieces.map(piece => ({
                 x: piece.position.x,
                 y: piece.position.y,
                 z: piece.position.z
             }));
 
+            const pieceColumns = pieces.map(piece => 
+                Math.round((piece.position.x + 1.875) / 1.25)
+            );
+            
+            const existingColumns = [...new Set(pieceColumns)].sort((a, b) => b - a);
+            
+            const columnDelayMap = {};
+            existingColumns.forEach((col, idx) => {
+                columnDelayMap[col] = idx * 0.1;
+            });
+        
             function easeInOutCubic(t) {
                 return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
             }
@@ -2117,27 +2131,26 @@
             function animate() {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-
+        
                 if (progress < 0.25) {
                     const tiltProgress = easeInOutCubic(progress / 0.25);
                     boardGroup.rotation.z = -Math.PI / 8 * tiltProgress;
                 }
-
+        
                 pieces.forEach((piece, index) => {
-                    const delay = index * 0.015;
-                    const adjustedProgress = Math.max(0, Math.min(1, (progress - delay) / (1 - delay)));
+                    const colDelay = columnDelayMap[pieceColumns[index]];
+                    const adjustedProgress = Math.max(0, Math.min(1, (progress - colDelay) / (1 - colDelay)));
                     
                     if (adjustedProgress > 0.25) {
                         const slideProgress = (adjustedProgress - 0.25) / 0.75;
-
                         const slideDistance = slideProgress * slideProgress * 10;
                         piece.position.x = initialPositions[index].x + slideDistance;
-
+        
                         const localX = piece.position.x;
                         if (localX > 3) {
                             const fallProgress = Math.min((localX - 3) / 4, 1);
                             piece.position.y = initialPositions[index].y - fallProgress * fallProgress * 5;
-
+        
                             if (piece.material) {
                                 piece.material.opacity = Math.max(0, 1 - fallProgress);
                                 if (!piece.material.transparent) {
@@ -2440,9 +2453,11 @@
         }
 
         function startNewGame() {
-            if (isGameEnding) {
-                return; 
+            if (isGameEnding || isRestarting || isAnimating) {
+                return;
             }
+            
+            isRestarting = true;
             
             document.getElementById('gameOverModal').style.display = 'none';
             
@@ -2452,7 +2467,7 @@
                 scene.remove(lastMoveHighlight);
                 lastMoveHighlight = null;
             }
- 
+        
             gameState = 'playing';
             currentPlayer = 0;
             moveHistory = [];
@@ -2460,8 +2475,8 @@
             white_node = 1;
             changed_node = [...node];
             isGameEnding = false;
-            isAnimating = true; 
-
+            isAnimating = true;
+        
             updateMoveHistoryDisplay();
             
             if (boardPieces.length > 0) {
@@ -2473,35 +2488,42 @@
                             board[y][x] = 0;
                         }
                     }
-
+        
                     board[1][1] = 2;
                     board[1][2] = 1;
                     board[2][1] = 1;
                     board[2][2] = 2;
-
+        
                     updateScore();
             
                     const initialPositions = [
                         {x: 1, y: 1, color: 2}, 
                         {x: 2, y: 1, color: 1}, 
                         {x: 1, y: 2, color: 1}, 
-                        {x: 2, y: 2, color: 2} 
+                        {x: 2, y: 2, color: 2}
                     ];
             
                     let placedPieces = 0;
-                    let callbackExecuted = false;
+                    let animationStarted = false;
                     
                     initialPositions.forEach((pos, index) => {
                         setTimeout(() => {
+                            if (!isRestarting) return;
+                            
                             dropPieceWithBounce(pos.x, pos.y, pos.color, () => {
                                 placedPieces++;
-                                if (placedPieces === initialPositions.length && !callbackExecuted) {
-                                    callbackExecuted = true;
+                                if (placedPieces === initialPositions.length && !animationStarted) {
+                                    animationStarted = true;
                                     isAnimating = false;
+                                    isRestarting = false;
                                     updateMessage("あなたの番です");
+                                    restartButton.disabled = false;
+                                    restartButton.style.pointerEvents = 'auto';
                                     
                                     setTimeout(() => {
-                                        showValidMoves();
+                                        if (validMovesHighlights.length === 0) {
+                                            showValidMoves();
+                                        }
                                     }, 300);
                                 }
                             });
@@ -2509,22 +2531,32 @@
                     });
                 });
             } else {
+                isRestarting = false;
                 initializeGame();
             }
         }
 
         function restartGameFromModal() {
+            if (isRestarting || isAnimating) {
+                return;
+            }
+            
+            isRestarting = true;
+            
             const gameResult = document.getElementById('gameResult');
             const scoreSection = document.getElementById('scoreSection');
             const restartButton = document.getElementById('restartButton');
             const modalContent = document.querySelector('.modal-content');
+            
+            restartButton.disabled = true;
+            restartButton.style.pointerEvents = 'none';
             
             gameResult.classList.remove('show');
             scoreSection.classList.remove('show');
             restartButton.classList.remove('show');
             modalContent.classList.remove('show');
             modalContent.classList.add('hide');
-
+        
             setTimeout(() => {
                 document.getElementById('gameOverModal').style.display = 'none';
                 modalContent.classList.remove('hide');
@@ -2543,63 +2575,67 @@
                 white_node = 1;
                 changed_node = [...node];
                 isGameEnding = false;
-                isAnimating = true; 
+                isAnimating = true;
         
                 updateMoveHistoryDisplay();
                 
-                if (boardPieces.length > 0) {
-                    animateRemoveAllPiecesWithTilt(() => {
-                        board = [];
-                        for (let y = 0; y < 4; y++) {
-                            board[y] = [];
-                            for (let x = 0; x < 4; x++) {
-                                board[y][x] = 0;
-                            }
+                animateRemoveAllPiecesWithTilt(() => {
+                    board = [];
+                    for (let y = 0; y < 4; y++) {
+                        board[y] = [];
+                        for (let x = 0; x < 4; x++) {
+                            board[y][x] = 0;
                         }
-
-                        board[1][1] = 2;
-                        board[1][2] = 1;
-                        board[2][1] = 1;
-                        board[2][2] = 2;
-
-                        updateScore();
+                    }
         
-                        const initialPositions = [
-                            {x: 1, y: 1, color: 2}, 
-                            {x: 2, y: 1, color: 1}, 
-                            {x: 1, y: 2, color: 1}, 
-                            {x: 2, y: 2, color: 2} 
-                        ];
+                    board[1][1] = 2;
+                    board[1][2] = 1;
+                    board[2][1] = 1;
+                    board[2][2] = 2;
         
-                        let placedPieces = 0;
-                        let callbackExecuted = false;
-                        
-                        initialPositions.forEach((pos, index) => {
-                            setTimeout(() => {
-                                dropPieceWithBounce(pos.x, pos.y, pos.color, () => {
-                                    placedPieces++;
-                                    if (placedPieces === initialPositions.length && !callbackExecuted) {
-                                        callbackExecuted = true;
-                                        board[1][1] = 2;
-                                        board[1][2] = 1;
-                                        board[2][1] = 1;
-                                        board[2][2] = 2;
-                                        
-                                        isAnimating = false;
-                                        updateScore();
-                                        updateMessage("あなたの番です");
-                                        
-                                        setTimeout(() => {
+                    updateScore();
+        
+                    const initialPositions = [
+                        {x: 1, y: 1, color: 2}, 
+                        {x: 2, y: 1, color: 1}, 
+                        {x: 1, y: 2, color: 1}, 
+                        {x: 2, y: 2, color: 2}
+                    ];
+        
+                    let placedPieces = 0;
+                    let animationStarted = false;
+                    
+                    initialPositions.forEach((pos, index) => {
+                        setTimeout(() => {
+                            if (!isRestarting) return;
+                            
+                            dropPieceWithBounce(pos.x, pos.y, pos.color, () => {
+                                placedPieces++;
+                                if (placedPieces === initialPositions.length && !animationStarted) {
+                                    animationStarted = true;
+                                    board[1][1] = 2;
+                                    board[1][2] = 1;
+                                    board[2][1] = 1;
+                                    board[2][2] = 2;
+                                    
+                                    isAnimating = false;
+                                    isRestarting = false;
+                                    updateScore();
+                                    updateMessage("あなたの番です");
+                                    
+                                    restartButton.disabled = false;
+                                    restartButton.style.pointerEvents = 'auto';
+                                    
+                                    setTimeout(() => {
+                                        if (validMovesHighlights.length === 0) {
                                             showValidMoves();
-                                        }, 300);
-                                    }
-                                });
-                            }, index * 150);
-                        });
+                                        }
+                                    }, 300);
+                                }
+                            });
+                        }, index * 150);
                     });
-                } else {
-                    initializeGame();
-                }
+                });
             }, 300);
         }
 
@@ -2608,15 +2644,28 @@
                 return;
             }
             
+            if (isAnimating || isGameEnding) {
+                return;
+            }
+            
             document.getElementById('titleScreen').style.display = 'none';
             document.getElementById('gameContainer').style.display = 'block';
+            
+            boardPieces.forEach(piece => boardGroup.remove(piece));
+            boardPieces = [];
+            validMovesHighlights.forEach(highlight => scene.remove(highlight));
+            validMovesHighlights = [];
+            if (lastMoveHighlight) {
+                scene.remove(lastMoveHighlight);
+                lastMoveHighlight = null;
+            }
             
             initialAnimationDone = false;
             isAnimating = false;
             isGameEnding = false;
+            gameState = 'playing';
             setButtonsEnabled(false);
         
-            initialAnimationDone = false;
             initializeGame();
         }
 
