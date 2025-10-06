@@ -2394,7 +2394,7 @@
             if (moveHistory.length === 0 || gameState !== 'playing' || isAnimating || isGameEnding) {
                 return;
             }
-
+        
             const myTurn = currentPlayer;
             const removedMoves = [];
             
@@ -2404,7 +2404,7 @@
                 
                 removedMoves.push({ t, move: lastMove });
                 moveHistory.pop();
-
+        
                 if (lastMove.x !== -1 && gameNotation.length > 0) {
                     gameNotation.pop();
                 }
@@ -2415,12 +2415,12 @@
             }
             
             replayBoard();
-
+        
             if (lastMoveHighlight) {
                 scene.remove(lastMoveHighlight);
                 lastMoveHighlight = null;
             }
-
+        
             if (moveHistory.length > 0) {
                 const lastMove = moveHistory[moveHistory.length - 1];
                 if (lastMove.x !== -1) {
@@ -2430,6 +2430,8 @@
             
             updateBoard();
             updateScore();
+
+            hideValidMoves();
             
             if (currentPlayer === 0 && getValidMoves(1).length > 0) {
                 updateMessage("あなたの番です");
