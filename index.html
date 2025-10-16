@@ -732,6 +732,21 @@
             margin-bottom: 20px;
         }
 
+        canvas {
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            background: transparent !important;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #97c1be 0%, #2ea8f4 100%);
+        }
+
     </style>
 </head>
 <body>
@@ -907,12 +922,12 @@
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x6fa8dc);
+            scene.background = null;
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             adjustCameraForScreenSize();
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -927,6 +942,10 @@
             directionalLight.shadow.mapSize.width = 2048;
             directionalLight.shadow.mapSize.height = 2048;
             scene.add(directionalLight);
+
+            const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256);
+            const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
+            scene.add(cubeCamera);
 
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
@@ -991,7 +1010,12 @@
 
         function createBoard() {
             const boardGeometry = new THREE.BoxGeometry(5, 0.3, 5);
-            const boardMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+            const boardMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x228B22,
+                specular: 0x444444,
+                shininess: 10,
+                reflectivity: 0.3
+            });
             const boardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
             boardMesh.receiveShadow = true;
             boardGroup.add(boardMesh);
@@ -1020,6 +1044,7 @@
                 canvas.height = 64;
                 const context = canvas.getContext('2d');
                 context.fillStyle = 'black';
+                context.smooth = true;
                 context.font = '60px Arial';
                 context.textAlign = 'center';
                 context.textBaseline = 'middle';
@@ -1097,6 +1122,8 @@
 
         function createPieceGeometry() {
             const cylinder = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 32);
+
+            cylinder.computeVertexNormals();
             
             const colors = [];
             const positions = cylinder.attributes.position.array;
@@ -1104,7 +1131,7 @@
             for (let i = 0; i < positions.length; i += 3) {
                 const y = positions[i + 1];
                 
-                if (y > 0) {
+                if (y >= 0) {
                     colors.push(0.2, 0.2, 0.2);
                 } else {
                     colors.push(1.0, 1.0, 1.0);
@@ -1256,27 +1283,75 @@
         }
 
         function createPiece(x, y, color) {
-            const geometry = createPieceGeometry();
-            const material = new THREE.MeshLambertMaterial({ 
-                vertexColors: true,
-                transparent: true,
-                opacity: 1
-            });
-            const piece = new THREE.Mesh(geometry, material);
+            const group = new THREE.Group();
             
-            piece.position.set(
+            const topGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 32, 1, true);
+            const topMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x333333,
+                flatShading: true,
+                shininess: 80,
+                specular: 0x666666
+            });
+            const topPiece = new THREE.Mesh(topGeometry, topMaterial);
+            topPiece.position.y = 0.05;
+            topPiece.castShadow = true;
+            topPiece.receiveShadow = true;
+            
+            const topCapGeometry = new THREE.CircleGeometry(0.4, 32);
+            const topCapMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x333333,
+                flatShading: true,
+                shininess: 80,
+                specular: 0x666666
+            });
+            const topCap = new THREE.Mesh(topCapGeometry, topCapMaterial);
+            topCap.rotation.x = -Math.PI / 2;
+            topCap.position.y = 0.1;
+            topCap.castShadow = true;
+            topCap.receiveShadow = true;
+
+            const bottomGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 32, 1, true);
+            const bottomMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xffffff,
+                flatShading: true,
+                shininess: 80,
+                specular: 0xaaaaaa
+            });
+            const bottomPiece = new THREE.Mesh(bottomGeometry, bottomMaterial);
+            bottomPiece.position.y = -0.05;
+            bottomPiece.castShadow = true;
+            bottomPiece.receiveShadow = true;
+
+            const bottomCapGeometry = new THREE.CircleGeometry(0.4, 32);
+            const bottomCapMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xffffff,
+                flatShading: true,
+                shininess: 80,
+                specular: 0xaaaaaa
+            });
+            const bottomCap = new THREE.Mesh(bottomCapGeometry, bottomCapMaterial);
+            bottomCap.rotation.x = Math.PI / 2;
+            bottomCap.position.y = -0.1;
+            bottomCap.castShadow = true;
+            bottomCap.receiveShadow = true;
+            
+            group.add(topPiece);
+            group.add(topCap);
+            group.add(bottomPiece);
+            group.add(bottomCap);
+            
+            group.position.set(
                 -1.875 + x * 1.25,
                 0.25,
                 -1.875 + y * 1.25
             );
             
             if (color === 2) {
-                piece.rotation.x = Math.PI;
+                group.rotation.x = Math.PI;
             }
             
-            piece.castShadow = true;
-            boardGroup.add(piece);
-            boardPieces.push(piece);
+            boardGroup.add(group);
+            boardPieces.push(group);
         }
 
         let lastClickTime = 0;
@@ -1649,11 +1724,11 @@
             validMovesVisible = true;
         
             moves.forEach(move => {
-                const geometry = new THREE.RingGeometry(0.3, 0.5, 16);
+                const geometry = new THREE.PlaneGeometry(1.25, 1.25);
                 const material = new THREE.MeshBasicMaterial({ 
-                    color: 0x00ffff, 
+                    color: 0x00ffff,
                     transparent: true, 
-                    opacity: 0.6 
+                    opacity: 0
                 });
                 const highlight = new THREE.Mesh(geometry, material);
                 highlight.position.set(
@@ -1665,6 +1740,30 @@
                 scene.add(highlight);
                 validMovesHighlights.push(highlight);
             });
+
+            fadeInValidMoves();
+
+        }
+
+        function fadeInValidMoves() {
+            const duration = 400;
+            const startTime = Date.now();
+            const targetOpacity = 0.6;
+            
+            function fade() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const opacity = targetOpacity * progress;
+                
+                validMovesHighlights.forEach(highlight => {
+                    highlight.material.opacity = opacity;
+                });
+                
+                if (progress < 1) {
+                    requestAnimationFrame(fade);
+                }
+            }
+            fade();
         }
 
         function hideValidMoves() {
@@ -2061,47 +2160,6 @@
             }, 2000);
         }
 
-        function animateRemoveAllPieces(callback) {
-            const duration = 800;
-            const startTime = Date.now();
-            const pieces = [...boardPieces];
-
-            function animate() {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-
-                pieces.forEach((piece, index) => {
-                    const delay = index * 50;
-                    const adjustedProgress = Math.max(0, Math.min(1, (elapsed - delay) / (duration - delay)));
-                    
-                    if (adjustedProgress > 0) {
-                        const velocity = 8 * adjustedProgress;
-                        const gravity = 12 * adjustedProgress * adjustedProgress;
-                        piece.position.y = 0.25 + velocity - gravity;
-
-                        piece.rotation.x += 0.2 * adjustedProgress;
-                        piece.rotation.z += 0.15 * adjustedProgress;
-
-                        if (piece.material) {
-                            piece.material.opacity = 1 - adjustedProgress;
-                            if (!piece.material.transparent) {
-                                piece.material.transparent = true;
-                            }
-                        }
-                    }
-                });
-
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    boardPieces.forEach(piece => scene.remove(piece));
-                    boardPieces = [];
-                    callback();
-                }
-            }
-            animate();
-        }
-
         function animateRemoveAllPiecesWithTilt(callback) {
             const duration = 2500;
             const startTime = Date.now();
@@ -2112,7 +2170,7 @@
                 y: piece.position.y,
                 z: piece.position.z
             }));
-
+        
             const pieceColumns = pieces.map(piece => 
                 Math.round((piece.position.x + 1.875) / 1.25)
             );
@@ -2122,6 +2180,14 @@
             const columnDelayMap = {};
             existingColumns.forEach((col, idx) => {
                 columnDelayMap[col] = idx * 0.1;
+            });
+
+            pieces.forEach(piece => {
+                piece.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        child.material.transparent = true;
+                    }
+                });
             });
         
             function easeInOutCubic(t) {
@@ -2150,13 +2216,13 @@
                         if (localX > 3) {
                             const fallProgress = Math.min((localX - 3) / 4, 1);
                             piece.position.y = initialPositions[index].y - fallProgress * fallProgress * 5;
-        
-                            if (piece.material) {
-                                piece.material.opacity = Math.max(0, 1 - fallProgress);
-                                if (!piece.material.transparent) {
-                                    piece.material.transparent = true;
+
+                            const opacity = Math.max(0, 1 - fallProgress);
+                            piece.traverse((child) => {
+                                if (child.isMesh && child.material) {
+                                    child.material.opacity = opacity;
                                 }
-                            }
+                            });
                         }
                     }
                 });
@@ -2171,14 +2237,14 @@
                         const resetElapsed = Date.now() - resetStartTime;
                         const resetProgress = Math.min(resetElapsed / resetDuration, 1);
                         const easedProgress = easeInOutCubic(resetProgress);
-
+        
                         boardGroup.rotation.z = -Math.PI / 8 * (1 - easedProgress);
                         
                         if (resetProgress < 1) {
                             requestAnimationFrame(resetAnimate);
                         } else {
                             boardGroup.rotation.z = 0;
-
+        
                             pieces.forEach(piece => {
                                 boardGroup.remove(piece);
                             });
@@ -2239,26 +2305,82 @@
         }
 
         function dropPieceWithBounce(x, y, color, callback) {
-            const geometry = createPieceGeometry();
-            const material = new THREE.MeshLambertMaterial({ 
-                vertexColors: true,
+            const group = new THREE.Group();
+
+            const topGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 32, 1, true);
+            const topMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x333333,
                 transparent: true,
-                opacity: 0
+                opacity: 0,
+                flatShading: true,
+                shininess: 80,
+                specular: 0x666666
             });
-            const piece = new THREE.Mesh(geometry, material);
+            const topPiece = new THREE.Mesh(topGeometry, topMaterial);
+            topPiece.position.y = 0.05;
+            topPiece.castShadow = true;
+            topPiece.receiveShadow = true;
+            
+            const topCapGeometry = new THREE.CircleGeometry(0.4, 32);
+            const topCapMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x333333,
+                transparent: true,
+                opacity: 0,
+                flatShading: true,
+                shininess: 80,
+                specular: 0x666666
+            });
+            const topCap = new THREE.Mesh(topCapGeometry, topCapMaterial);
+            topCap.rotation.x = -Math.PI / 2;
+            topCap.position.y = 0.1;
+            topCap.castShadow = true;
+            topCap.receiveShadow = true;
+
+            const bottomGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 32, 1, true);
+            const bottomMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0,
+                flatShading: true,
+                shininess: 80,
+                specular: 0xaaaaaa
+            });
+            const bottomPiece = new THREE.Mesh(bottomGeometry, bottomMaterial);
+            bottomPiece.position.y = -0.05;
+            bottomPiece.castShadow = true;
+            bottomPiece.receiveShadow = true;
+            
+            const bottomCapGeometry = new THREE.CircleGeometry(0.4, 32);
+            const bottomCapMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0,
+                flatShading: true,
+                shininess: 80,
+                specular: 0xaaaaaa
+            });
+            const bottomCap = new THREE.Mesh(bottomCapGeometry, bottomCapMaterial);
+            bottomCap.rotation.x = Math.PI / 2;
+            bottomCap.position.y = -0.1;
+            bottomCap.castShadow = true;
+            bottomCap.receiveShadow = true;
+            
+            group.add(topPiece);
+            group.add(topCap);
+            group.add(bottomPiece);
+            group.add(bottomCap);
             
             const targetX = -1.875 + x * 1.25;
             const targetZ = -1.875 + y * 1.25;
-            piece.position.set(targetX, 6, targetZ);
+            group.position.set(targetX, 6, targetZ);
             
             if (color === 2) {
-                piece.rotation.x = Math.PI;
+                group.rotation.x = Math.PI;
             }
             
-            piece.castShadow = true;
-            boardGroup.add(piece);
-            boardPieces.push(piece);
-
+            boardGroup.add(group);
+            boardPieces.push(group);
+        
             const duration = 800;
             const startTime = Date.now();
             const targetY = 0.25;
@@ -2268,27 +2390,33 @@
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
         
-                piece.material.opacity = Math.min(progress * 2, 1);
+                topMaterial.opacity = Math.min(progress * 2, 1);
+                topCapMaterial.opacity = Math.min(progress * 2, 1);
+                bottomMaterial.opacity = Math.min(progress * 2, 1);
+                bottomCapMaterial.opacity = Math.min(progress * 2, 1);
         
                 let bounceProgress;
                 if (progress < 0.8) {
                     bounceProgress = progress / 0.8;
-                    piece.position.y = startY + (targetY - startY) * bounceProgress * bounceProgress;
+                    group.position.y = startY + (targetY - startY) * bounceProgress * bounceProgress;
                 } else {
                     const bouncePhase = (progress - 0.8) / 0.2;
                     const bounceHeight = 0.3 * (1 - bouncePhase);
                     const bounceOffset = Math.sin(bouncePhase * Math.PI * 3) * bounceHeight;
-                    piece.position.y = targetY + bounceOffset;
+                    group.position.y = targetY + bounceOffset;
                 }
         
-                piece.rotation.y = progress * Math.PI * 2;
+                group.rotation.y = progress * Math.PI * 2;
         
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    piece.position.y = targetY;
-                    piece.rotation.y = 0;
-                    piece.material.opacity = 1;
+                    group.position.y = targetY;
+                    group.rotation.y = 0;
+                    topMaterial.opacity = 1;
+                    topCapMaterial.opacity = 1;
+                    bottomMaterial.opacity = 1;
+                    bottomCapMaterial.opacity = 1;
                     if (callback && typeof callback === 'function') {
                         callback();
                     }
@@ -2779,9 +2907,6 @@
             
             camera.position.x = Math.sin(Date.now() * 0.0005) * 0.1;
             camera.lookAt(0, 0, 0);
-            validMovesHighlights.forEach(highlight => {
-                highlight.material.opacity = 0.4 + Math.sin(Date.now() * 0.003) * 0.3;
-            });
 
             renderer.render(scene, camera);
         }
